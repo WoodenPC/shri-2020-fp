@@ -15,37 +15,59 @@
  * Ответ будет приходить в поле {result}
  */
 import Api from '../tools/api';
+import { pipe, __, allPass, andThen, prop, tap, ifElse, modulo, length } from 'ramda';
 
 const api = new Api();
 
-/**
- * Я – пример, удали меня
- */
-const wait = time => new Promise(resolve => {
-    setTimeout(resolve, time);
-})
+const hasLessThanTenSymbols = (str) => str.length <= 10;
+
+const hasMoreThanTwoSymbols = (str) => str.length >= 2;
+
+const isPositiveNumber = (str) =>  /^[0-9]+(\.)?[0-9]*$/.test(str);
+
+const convertStrToInt = (str) => pipe(parseFloat, Math.round)(str);
+
+const isValidStr = (str) => allPass([hasLessThanTenSymbols, hasMoreThanTwoSymbols, isPositiveNumber])(str);
+
+const getConvertedNumberFromApi = (number) => api.get('https://api.tech/numbers/base', { from: 10, to: 2, number });
+
+const getRandomAnimalFromApi = (id) => api.get(`https://animals.tech/${id}`, {});
+
+const getSquaredNumber = (number) => number * number;
+
+const getConvertedNumberAsync = (number) => pipe(
+    getConvertedNumberFromApi,
+    andThen(prop('result'))
+)(number);
+
+const getRandomAnimalAsync = (id) => pipe(
+    getRandomAnimalFromApi,
+    andThen(prop('result'))
+)(id);
 
 const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-    /**
-     * Я – пример, удали меня
-     */
-    writeLog(value);
-
-    api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-        writeLog(result);
-    });
-
-    wait(2500).then(() => {
-        writeLog('SecondLog')
-
-        return wait(1500);
-    }).then(() => {
-        writeLog('ThirdLog');
-
-        return wait(400);
-    }).then(() => {
-        handleSuccess('Done');
-    });
+    return pipe(
+        tap(writeLog),
+        ifElse(
+            isValidStr,
+            pipe(
+                convertStrToInt,
+                getConvertedNumberAsync,
+                andThen(pipe(
+                    tap(writeLog),
+                    length,
+                    tap(writeLog),
+                    getSquaredNumber,
+                    tap(writeLog),
+                    modulo(__, 3),
+                    tap(writeLog),
+                    getRandomAnimalAsync,
+                )),
+                andThen(handleSuccess)
+            ),
+            () => handleError('ValidationError'),
+        )
+    )(value);
 }
 
 export default processSequence;
