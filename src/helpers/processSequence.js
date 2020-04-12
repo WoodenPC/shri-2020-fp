@@ -15,7 +15,7 @@
  * Ответ будет приходить в поле {result}
  */
 import Api from '../tools/api';
-import { pipe, __, allPass, andThen, prop, tap, ifElse, modulo, length } from 'ramda';
+import { pipe, __, allPass, andThen, prop, tap, ifElse, modulo, length, otherwise } from 'ramda';
 
 const api = new Api();
 
@@ -62,8 +62,9 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
                     modulo(__, 3),
                     tap(writeLog),
                     getRandomAnimalAsync,
+                    andThen(handleSuccess)
                 )),
-                andThen(handleSuccess)
+                otherwise(tap(handleError)),
             ),
             () => handleError('ValidationError'),
         )
